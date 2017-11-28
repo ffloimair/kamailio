@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2001-2005 iptel.org
  * Copyright (C) 2007-2008 1&1 Internet AG
  *
@@ -14,8 +14,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
@@ -81,7 +81,7 @@ static int dupl_string_name(char** dst, const char* begin, const char* end)
 
 
 /**
- * Parse a database URL of form 
+ * Parse a database URL of form
  * scheme://[username[:password]@]hostname[:port]/database
  *
  * \param id filled id struct
@@ -114,16 +114,27 @@ static int parse_db_url(struct db_id* id, const str* url)
 	if (!id || !url || !url->s) {
 		goto err;
 	}
-	
+
 	len = url->len;
 	if (len < SHORTEST_DB_URL_LEN) {
 		goto err;
 	}
-	
+
 	/* Initialize all attributes to 0 */
 	memset(id, 0, sizeof(struct db_id));
 	st = ST_SCHEME;
 	begin = url->s;
+
+	//count number of '@' in URI
+	int no_of_ats = 0;
+	for(int j = 0; j < url->len; j++) {
+		switch(url->s[j]) {
+		case '@':
+			no_of_ats++;
+		default:
+			break;
+		}
+	}
 
 	for(i = 0; i < len; i++) {
 		switch(st) {
@@ -153,7 +164,7 @@ static int parse_db_url(struct db_id* id, const str* url)
 				st = ST_USER_HOST;
 				begin = url->s + i + 1;
 				break;
-				
+
 			default:
 				goto err;
 			}
@@ -162,9 +173,13 @@ static int parse_db_url(struct db_id* id, const str* url)
 		case ST_USER_HOST:
 			switch(url->s[i]) {
 			case '@':
-				st = ST_HOST;
-				if (dupl_string(&id->username, begin, url->s + i) < 0) goto err;
-				begin = url->s + i + 1;
+				if (no_of_ats == 1) {
+					st = ST_HOST;
+					if (dupl_string(&id->username, begin, url->s + i) < 0) goto err;
+					begin = url->s + i + 1;
+				} else {
+					no_of_ats--;
+				}
 				break;
 
 			case ':':
@@ -230,7 +245,7 @@ static int parse_db_url(struct db_id* id, const str* url)
 				return 0;
 			}
 			break;
-			
+
 		case ST_DB:
 			break;
 		}
